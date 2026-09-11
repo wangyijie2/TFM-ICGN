@@ -1,0 +1,69 @@
+TFM-ICGN licensing notices
+Copyright 2026 Wang Yijie (王翊杰), for original contributions and modifications.
+
+License scope
+-------------
+Unless an exception below applies, project contributions, documentation,
+configuration, checkpoints/step_250000.pth and data/tension009/*.bmp are
+distributed under the Apache License, Version 2.0, included in LICENSE.
+Third-party rights and the notices below remain applicable. This statement
+does not relicense third-party material or imply endorsement.
+
+The following source files are distributed under MPL-2.0:
+  source/icgn/deformation.py
+  source/icgn/fftcc.py
+  source/icgn/gradient.py
+  source/icgn/icgn_core.py
+  source/icgn/icgn2d2.py
+  source/icgn/interpolation.py
+  source/icgn/sift_affine.py
+See LICENSES/MPL-2.0.txt. Their source form is included in this distribution.
+This release conservatively retains MPL terms for these adapted solver files;
+it does not claim they can be relicensed as Apache-only code.
+
+source/run_RG_icgn.py is distributed under BSD-3-Clause.
+See LICENSES/BSD-3-Clause.txt; the copyright notice there must be retained.
+
+Copyright and license notices
+-----------------------------
+Network and input utility files: Apache-2.0.
+  DICTr: https://github.com/vincentjzy/dictr
+  License: https://github.com/vincentjzy/dictr/blob/main/LICENSE
+  The checked license has no filled-in author copyright statement;
+  no author or year has been invented for it.
+
+  GMFlow: Copyright 2022, Haofei Xu
+  https://github.com/haofeixu/gmflow/blob/main/LICENSE
+
+source/networks/position.py:
+  Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+  Copyright 2020 - present, Facebook, Inc
+  Apache-2.0; https://github.com/facebookresearch/detr/blob/main/LICENSE
+
+source/networks/trident_conv.py:
+  Copyright (c) Facebook, Inc. and its affiliates.
+  Apache-2.0; https://github.com/facebookresearch/detectron2/blob/main/LICENSE
+
+The MPL-covered files listed above:
+  Copyright (C) 2021-2025, Zhenyu Jiang <zhenyujiang@scut.edu.cn>
+  OpenCorr; https://github.com/vincentjzy/OpenCorr/blob/master/LICENSE
+  The preserved license also contains Copyright (C) 2021, Zhenyu Jiang.
+
+source/run_RG_icgn.py:
+  Copyright (c) 2017, Justin Blaber
+  All rights reserved.
+  https://github.com/justinblaber/ncorr_2D_matlab/blob/master/license.txt
+
+Modification notice
+-------------------
+This project includes modified Python source files. Changes include network
+configuration adaptations, integration of initialization with IC-GN, model
+renaming, removal of explanatory comments, and removal of selected absolute
+displacement component filters. Individual files carry modification notices.
+License and copyright notices are intentionally retained.
+
+Verification date: 2026-09-11.
+The license texts were retrieved from the official repositories linked above.
+No root NOTICE file was found at those checked repository branches.
+External packages installed through requirements.txt retain their own licenses;
+their package source or binaries are not bundled here.

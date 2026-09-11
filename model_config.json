@@ -1,0 +1,30 @@
+{
+  "model": {
+    "num_scales": 1,
+    "num_transformer_blocks": 16,
+    "upsample_factor": 2,
+    "feature_channels": 128,
+    "attention_type": "swin",
+    "ffn_dim_expansion": 4,
+    "num_head": 1
+  },
+  "forward": {
+    "attn_splits_list": [
+      8
+    ],
+    "corr_radius_list": [
+      5
+    ],
+    "prop_radius_list": false
+  },
+  "training": {
+    "batch_size": 2,
+    "num_steps": 250000,
+    "seed": 326,
+    "lr": 0.0002,
+    "weight_decay": 0.0001,
+    "gamma": 0.9
+  },
+  "checkpoint": "checkpoints/step_250000.pth",
+  "checkpoint_sha256": "6bbf9268e07803b0a791fc38280b1c0249595e8374fda85922980fdef4f7e1b8"
+}
