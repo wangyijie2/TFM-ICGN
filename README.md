@@ -21,7 +21,7 @@ TFM-ICGN 使用基于 Transformer 的 TFM-DIC 网络生成位移初值，再通�
 | SIFT-ICGN | SIFT 匹配与局部仿射估计 | `source/run_sift_icgn.py` |
 | RG-ICGN | 中心种子 FFT 初始化，按 ZNCC 优先级向四邻域传播 | `source/run_RG_icgn.py` |
 
-四种入口均使用项目的二阶、12 参数 IC-GN 求解器。RG-ICGN 是本项目的可靠性引导实现，不等同于完整的官方 Ncorr 实现；每点最多尝试一次，失败点不传播，也不自动补种。
+四种入口均使用项目的二阶、12 参数 IC-GN 求解器。RG-ICGN 使用按相关性排序的优先队列向四邻域传播，通过父点的一阶位移预测和梯度传递生成邻点初值，并检查父子点之间的位移连续性。
 
 当前代码的网络模块和类名均为 `tfmdic`；入口及输出文件中保留的 `gmdic`、`GM`、`GMGN` 是历史命名。
 
@@ -116,7 +116,7 @@ python source/run_RG_icgn.py
 
 TFM-ICGN 已集成网络推理和 IC-GN 精化，无需提前生成初值 CSV。入口从项目内的 `checkpoints/step_250000.pth` 加载权重，路径相对于脚本位置解析。
 
-输出写入 `DATA_DIR`，重复运行会更新同名结果。FFT、SIFT 和 RG 入口包含顶层执行代码，应作为脚本运行，避免将它们作为普通库模块导入。
+输出写入 `DATA_DIR`，重复运行会更新同名结果。FFT 和 SIFT 入口包含顶层执行代码，应作为脚本运行，避免将它们作为普通库模块导入。
 
 ## 6. 模型与求解参数
 
@@ -167,7 +167,7 @@ TFM-ICGN 已集成网络推理和 IC-GN 精化，无需提前生成初值 CSV。
 
 默认精化结果裁去四周 12 像素边界，数组位置需结合裁剪偏移映射回原图。TFM 网络初值文件保留完整图像尺寸，CSV 每行末尾带有逗号。
 
-不同入口的无效点输出约定尚未统一。尤其 RG 的未访问点会在 CSV 中填 0，部分失败点保留初值；不能仅依据 CSV 中的零值判断真实零位移或求解成功。
+RG 额外输出 `RG_ICGN2_valid.csv`：1 表示有效点，0 表示失败或未访问点。RG 位移 CSV 中的无效点填 0，位移图中留空；应结合有效点掩膜读取结果，不能把填充值当作真实零位移。
 
 TFM、FFT、SIFT 入口会更新数据目录中的 `实验指标汇总.csv`。当前 RG 入口仅使用其独立的控制台统计，没有接入该汇总逻辑，运行四个入口不会自动得到完整、统一的四方法结果表。
 
@@ -202,7 +202,7 @@ The repository includes method implementations, the final model checkpoint, and 
 | SIFT-ICGN | SIFT matching and local affine estimation | `source/run_sift_icgn.py` |
 | RG-ICGN | FFT initialization of a central seed, followed by ZNCC-prioritized propagation to four-connected neighbors | `source/run_RG_icgn.py` |
 
-All four entry points use the project's second-order, 12-parameter IC-GN solver. RG-ICGN is this project's reliability-guided implementation and is not equivalent to the complete official Ncorr implementation. Each point is attempted at most once; failed points do not propagate, and additional seeds are not introduced automatically.
+All four entry points use the project's second-order, 12-parameter IC-GN solver. RG-ICGN propagates to four-connected neighbors using a correlation-prioritized queue. Neighbor initialization uses first-order displacement prediction and gradient transfer from the parent point, with a displacement-continuity check between parent and child.
 
 The network module and class are both named `tfmdic`. The identifiers `gmdic`, `GM`, and `GMGN` retained in entry points and output filenames are historical names.
 
@@ -297,7 +297,7 @@ python source/run_RG_icgn.py
 
 TFM-ICGN integrates network inference and IC-GN refinement; no initial-displacement CSV needs to be generated beforehand. The checkpoint is loaded from `checkpoints/step_250000.pth`, with its path resolved relative to the script location.
 
-Outputs are written to `DATA_DIR`. Repeated runs update files with the same names. The FFT, SIFT, and RG entry points execute code at module level and should be run as scripts rather than imported as ordinary library modules.
+Outputs are written to `DATA_DIR`. Repeated runs update files with the same names. The FFT and SIFT entry points execute code at module level and should be run as scripts rather than imported as ordinary library modules.
 
 ## 6. Model and solver parameters
 
@@ -348,7 +348,7 @@ Displacement is measured in pixels. `U` is displacement along image columns, and
 
 By default, refined outputs exclude a 12-pixel border on all sides. Account for this offset when mapping output coordinates back to the original image. The TFM initial-displacement files retain the full image dimensions and contain a trailing comma on each CSV row.
 
-Invalid-point conventions differ between entry points. In particular, RG writes unvisited points as zeros in its CSV outputs, and some failed points retain their initial estimates. A zero in the CSV is therefore not sufficient to identify either a true zero displacement or a successful solution.
+RG also writes `RG_ICGN2_valid.csv`: 1 marks a valid point and 0 marks a failed or unvisited point. Invalid RG displacements are stored as zeros in CSV files and left blank in displacement plots. Use the validity mask to distinguish these fill values from true zero displacement.
 
 The TFM, FFT, and SIFT entry points update `实验指标汇总.csv` in the data directory. The current RG entry point uses separate console reporting and does not update this summary. Running all four entry points does not automatically produce a complete, consistently defined four-method results table.
 

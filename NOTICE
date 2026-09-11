@@ -59,7 +59,9 @@ Modification notice
 This project includes modified Python source files. Changes include network
 configuration adaptations, integration of initialization with IC-GN, model
 renaming, removal of explanatory comments, and removal of selected absolute
-displacement component filters. Individual files carry modification notices.
+displacement component filters. Further changes align neighbor propagation
+acceptance and add an explicit validity-mask output. Individual files carry
+modification notices.
 License and copyright notices are intentionally retained.
 
 Verification date: 2026-09-11.
