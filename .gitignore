@@ -9,10 +9,10 @@ venv/
 .pytest_cache/
 .DS_Store
 Thumbs.db
-/data/**/GM_U.csv
-/data/**/GM_V.csv
-/data/**/GMGN_U.csv
-/data/**/GMGN_V.csv
+/data/**/tfmdic_initial_U.csv
+/data/**/tfmdic_initial_V.csv
+/data/**/tfmdic_U.csv
+/data/**/tfmdic_V.csv
 /data/**/FFT_ICGN2_*.csv
 /data/**/SIFT_ICGN2_*.csv
 /data/**/RG_ICGN2_*.csv

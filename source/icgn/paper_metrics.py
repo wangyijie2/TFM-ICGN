@@ -76,7 +76,7 @@ def print_results(method_name, init_time, icgn_time, n_pois, avg_iter, success_r
         save_summary_table(table_directory, table_method, success_rate, succ_iters, init_time, paper_metrics)
 
 def save_summary_table(directory, method, csr, ain, init_seconds, metrics):
-    aliases = {'TMF-ICGN': 'TFM-ICGN', 'GMGN': 'TFM-ICGN', 'GM-GN': 'TFM-ICGN', 'FFT': 'FFT-ICGN', 'SIFT': 'SIFT-ICGN', 'Ncorr': 'RG-ICGN'}
+    aliases = {'TMF-ICGN': 'TFM-ICGN', 'FFT': 'FFT-ICGN', 'SIFT': 'SIFT-ICGN', 'Ncorr': 'RG-ICGN'}
     method = aliases.get(method, method)
     methods = ('TFM-ICGN', 'FFT-ICGN', 'SIFT-ICGN', 'RG-ICGN')
     if method not in methods:

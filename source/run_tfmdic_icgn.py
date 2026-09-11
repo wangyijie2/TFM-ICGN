@@ -23,7 +23,7 @@ def find_file(pattern, dir_path):
         raise FileNotFoundError(f"找不到匹配 '{pattern}' 的文件: {dir_path}")
     return matches[0]
 
-def estimate_gmdic(ref, tar):
+def estimate_tfmdic(ref, tar):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'Device: {device}')
     print(f'Loading: {CHECKPOINT}')
@@ -45,12 +45,12 @@ def estimate_gmdic(ref, tar):
         init_time = time.perf_counter() - started
         flow = padder.unpad(results['flow_preds'][-1][0]).detach().cpu().numpy()
     if flow.shape != (2, *ref.shape) or not np.isfinite(flow).all():
-        raise RuntimeError('GM-DIC 输出尺寸错误或包含非有限值')
-    print(f'GM-DIC forward (single call, no warm-up): {init_time:.6f} s')
+        raise RuntimeError('tfmdic 输出尺寸错误或包含非有限值')
+    print(f'tfmdic forward (single call, no warm-up): {init_time:.6f} s')
     return (flow[0], flow[1], init_time)
 
-def save_gmdic_initial(u, v, out_dir):
-    for (name, values) in [('GM_U.csv', u), ('GM_V.csv', v)]:
+def save_tfmdic_initial(u, v, out_dir):
+    for (name, values) in [('tfmdic_initial_U.csv', u), ('tfmdic_initial_V.csv', v)]:
         np.savetxt(os.path.join(out_dir, name), values, fmt='%.6f', delimiter=',', newline=',\n')
     (fig, axes) = plt.subplots(1, 2, figsize=(14, 6))
     for (ax, values, label) in zip(axes, (u, v), ('U', 'V')):
@@ -60,9 +60,9 @@ def save_gmdic_initial(u, v, out_dir):
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
     fig.tight_layout()
-    fig.savefig(os.path.join(out_dir, 'GM_displacement.png'), dpi=300, bbox_inches='tight')
+    fig.savefig(os.path.join(out_dir, 'tfmdic_initial_displacement.png'), dpi=300, bbox_inches='tight')
     plt.close(fig)
-    print('  Saved: GM_U.csv, GM_V.csv, GM_displacement.png')
+    print('  Saved: tfmdic_initial_U.csv, tfmdic_initial_V.csv, tfmdic_initial_displacement.png')
 
 def save_visualization(u_icgn, v_icgn, out_dir):
     (fig, axes) = plt.subplots(1, 2, figsize=(14, 6))
@@ -73,10 +73,10 @@ def save_visualization(u_icgn, v_icgn, out_dir):
     axes[1].set_title('TFM-ICGN: V Displacement')
     plt.colorbar(im1, ax=axes[1], fraction=0.046)
     plt.tight_layout()
-    png_path = os.path.join(out_dir, 'GMGN_displacement.png')
+    png_path = os.path.join(out_dir, 'tfmdic_displacement.png')
     plt.savefig(png_path, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f'  → GMGN_displacement.png')
+    print(f'  → tfmdic_displacement.png')
 
 def main():
     ref_path = find_file('*REF*.*', DATA_DIR)
@@ -91,24 +91,24 @@ def main():
     ref = ref.astype(np.float32)
     tar = tar.astype(np.float32)
     print(f'Size: {ref.shape[1]}x{ref.shape[0]}')
-    (u_gmdic, v_gmdic, init_time) = estimate_gmdic(ref, tar)
-    save_gmdic_initial(u_gmdic, v_gmdic, DATA_DIR)
-    print(f'GM-DIC: u [{u_gmdic.min():.3f}, {u_gmdic.max():.3f}], v [{v_gmdic.min():.3f}, {v_gmdic.max():.3f}]')
+    (u_tfmdic, v_tfmdic, init_time) = estimate_tfmdic(ref, tar)
+    save_tfmdic_initial(u_tfmdic, v_tfmdic, DATA_DIR)
+    print(f'tfmdic: u [{u_tfmdic.min():.3f}, {u_tfmdic.max():.3f}], v [{v_tfmdic.min():.3f}, {v_tfmdic.max():.3f}]')
     t0 = time.time()
-    result = refine_displacement(ref, tar, u_init=u_gmdic, v_init=v_gmdic, subset_radius=10, conv_criterion=0.0001, stop_condition=50, step_size=1, order=2, verbose=True, paper_timing=True)
+    result = refine_displacement(ref, tar, u_init=u_tfmdic, v_init=v_tfmdic, subset_radius=10, conv_criterion=0.0001, stop_condition=50, step_size=1, order=2, verbose=True, paper_timing=True)
     MARGIN = 12
     u_crop = result['u'][MARGIN:-MARGIN, MARGIN:-MARGIN]
     v_crop = result['v'][MARGIN:-MARGIN, MARGIN:-MARGIN]
-    np.savetxt(os.path.join(DATA_DIR, 'GMGN_U.csv'), u_crop, delimiter=',', fmt='%.6f')
-    np.savetxt(os.path.join(DATA_DIR, 'GMGN_V.csv'), v_crop, delimiter=',', fmt='%.6f')
+    np.savetxt(os.path.join(DATA_DIR, 'tfmdic_U.csv'), u_crop, delimiter=',', fmt='%.6f')
+    np.savetxt(os.path.join(DATA_DIR, 'tfmdic_V.csv'), v_crop, delimiter=',', fmt='%.6f')
     save_visualization(u_crop, v_crop, DATA_DIR)
-    delta = np.sqrt((result['u'] - u_gmdic) ** 2 + (result['v'] - v_gmdic) ** 2)
+    delta = np.sqrt((result['u'] - u_tfmdic) ** 2 + (result['v'] - v_tfmdic) ** 2)
     stats = result['stats']
     succ_iter = stats['succ_iterations'] / stats['success_count'] if stats['success_count'] > 0 else 0
     metric_selected = np.isfinite(result['convergence']) & (result['convergence'] >= 0) & (result['convergence'] < 0.0001) & (result['iteration'] >= 1) & (result['iteration'] <= 50) & (result['zncc'] >= 0.7)
     (metric_y, metric_x) = np.indices(ref.shape)
-    paper_metrics = evaluate_initialization(DATA_DIR, ref.shape, metric_x, metric_y, u_gmdic, v_gmdic, result['u'], result['v'], metric_selected, result['point_seconds'])
+    paper_metrics = evaluate_initialization(DATA_DIR, ref.shape, metric_x, metric_y, u_tfmdic, v_tfmdic, result['u'], result['v'], metric_selected, result['point_seconds'])
     print_results('TFM-ICGN', init_time, stats['time_elapsed'], stats['n_pois'], stats['avg_iterations'], stats['success_rate'] * 100, stats['success_count'], stats['fail_count'], delta.mean(), delta.max(), succ_time=stats['succ_time_total'], succ_iters=succ_iter, n_succ=stats['success_count'], paper_metrics=paper_metrics, table_directory=DATA_DIR, table_method='TFM-ICGN')
-    print(f'Output: {DATA_DIR}\\GMGN_U.csv, GMGN_V.csv, GMGN_displacement.png')
+    print(f'Output: {DATA_DIR}\\tfmdic_U.csv, tfmdic_V.csv, tfmdic_displacement.png')
 if __name__ == '__main__':
     main()

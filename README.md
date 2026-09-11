@@ -16,14 +16,13 @@ TFM-ICGN 使用基于 Transformer 的 TFM-DIC 网络生成位移初值，再通�
 
 | 方法 | 初始化方式 | 入口文件 |
 | --- | --- | --- |
-| TFM-ICGN | TFM-DIC 网络预测 | `source/run_gmdic_icgn.py` |
+| TFM-ICGN | TFM-DIC 网络预测 | `source/run_tfmdic_icgn.py` |
 | FFT-ICGN | FFT 互相关 | `source/run_fftcc_icgn.py` |
 | SIFT-ICGN | SIFT 匹配与局部仿射估计 | `source/run_sift_icgn.py` |
 | RG-ICGN | 中心种子 FFT 初始化，按 ZNCC 优先级向四邻域传播 | `source/run_RG_icgn.py` |
 
 四种入口均使用项目的二阶、12 参数 IC-GN 求解器。RG-ICGN 使用按相关性排序的优先队列向四邻域传播，通过父点的一阶位移预测和梯度传递生成邻点初值，并检查父子点之间的位移连续性。
 
-当前代码的网络模块和类名均为 `tfmdic`；入口及输出文件中保留的 `gmdic`、`GM`、`GMGN` 是历史命名。
 
 ## 2. 目录结构
 
@@ -45,7 +44,7 @@ TFM-ICGN 使用基于 Transformer 的 TFM-DIC 网络生成位移初值，再通�
 ├── checkpoints/
 │   └── step_250000.pth
 └── source/
-│   ├── run_gmdic_icgn.py
+│   ├── run_tfmdic_icgn.py
 │   ├── run_fftcc_icgn.py
 │   ├── run_sift_icgn.py
 │   ├── run_RG_icgn.py
@@ -108,7 +107,7 @@ DATA_DIR = r"D:\DIC_data\example"
 在项目根目录打开终端，按需运行：
 
 ```bash
-python source/run_gmdic_icgn.py
+python source/run_tfmdic_icgn.py
 python source/run_fftcc_icgn.py
 python source/run_sift_icgn.py
 python source/run_RG_icgn.py
@@ -160,7 +159,7 @@ TFM-ICGN 已集成网络推理和 IC-GN 精化，无需提前生成初值 CSV。
 
 | 方法 | 主要输出 |
 | --- | --- |
-| TFM-ICGN | 初值 `GM_U.csv`、`GM_V.csv`；精化结果 `GMGN_U.csv`、`GMGN_V.csv`；对应位移图 |
+| TFM-ICGN | 初值 `tfmdic_initial_U.csv`、`tfmdic_initial_V.csv`；精化结果 `tfmdic_U.csv`、`tfmdic_V.csv`；对应位移图 |
 | FFT-ICGN | `FFT_ICGN2_U.csv`、`FFT_ICGN2_V.csv`、`FFT_ICGN2_displacement.png` |
 | SIFT-ICGN | `SIFT_ICGN2_U.csv`、`SIFT_ICGN2_V.csv`、`SIFT_ICGN2_displacement.png` |
 | RG-ICGN | `RG_ICGN2_U.csv`、`RG_ICGN2_V.csv`、`RG_ICGN2_displacement.png` |
@@ -197,14 +196,13 @@ The repository includes method implementations, the final model checkpoint, and 
 
 | Method | Initialization | Entry point |
 | --- | --- | --- |
-| TFM-ICGN | TFM-DIC network prediction | `source/run_gmdic_icgn.py` |
+| TFM-ICGN | TFM-DIC network prediction | `source/run_tfmdic_icgn.py` |
 | FFT-ICGN | FFT cross-correlation | `source/run_fftcc_icgn.py` |
 | SIFT-ICGN | SIFT matching and local affine estimation | `source/run_sift_icgn.py` |
 | RG-ICGN | FFT initialization of a central seed, followed by ZNCC-prioritized propagation to four-connected neighbors | `source/run_RG_icgn.py` |
 
 All four entry points use the project's second-order, 12-parameter IC-GN solver. RG-ICGN propagates to four-connected neighbors using a correlation-prioritized queue. Neighbor initialization uses first-order displacement prediction and gradient transfer from the parent point, with a displacement-continuity check between parent and child.
 
-The network module and class are both named `tfmdic`. The identifiers `gmdic`, `GM`, and `GMGN` retained in entry points and output filenames are historical names.
 
 ## 2. Repository structure
 
@@ -226,7 +224,7 @@ The network module and class are both named `tfmdic`. The identifiers `gmdic`, `
 ├── checkpoints/
 │   └── step_250000.pth
 └── source/
-    ├── run_gmdic_icgn.py
+    ├── run_tfmdic_icgn.py
     ├── run_fftcc_icgn.py
     ├── run_sift_icgn.py
     ├── run_RG_icgn.py
@@ -289,7 +287,7 @@ Each entry point has its own `DATA_DIR`; there is currently no shared command-li
 Open a terminal in the repository root and run the methods you need:
 
 ```bash
-python source/run_gmdic_icgn.py
+python source/run_tfmdic_icgn.py
 python source/run_fftcc_icgn.py
 python source/run_sift_icgn.py
 python source/run_RG_icgn.py
@@ -341,7 +339,7 @@ Displacement is measured in pixels. `U` is displacement along image columns, and
 
 | Method | Main outputs |
 | --- | --- |
-| TFM-ICGN | Initial fields: `GM_U.csv`, `GM_V.csv`; refined fields: `GMGN_U.csv`, `GMGN_V.csv`; corresponding displacement plots |
+| TFM-ICGN | Initial fields: `tfmdic_initial_U.csv`, `tfmdic_initial_V.csv`; refined fields: `tfmdic_U.csv`, `tfmdic_V.csv`; corresponding displacement plots |
 | FFT-ICGN | `FFT_ICGN2_U.csv`, `FFT_ICGN2_V.csv`, `FFT_ICGN2_displacement.png` |
 | SIFT-ICGN | `SIFT_ICGN2_U.csv`, `SIFT_ICGN2_V.csv`, `SIFT_ICGN2_displacement.png` |
 | RG-ICGN | `RG_ICGN2_U.csv`, `RG_ICGN2_V.csv`, `RG_ICGN2_displacement.png` |
