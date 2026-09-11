@@ -1,4 +1,10 @@
-# TFM-ICGN：四种数字图像相关方法参考实现
+# TFM-ICGN | 数字图像相关参考实现 · Digital Image Correlation
+
+[中文](#chinese) | [English](#english)
+
+<a id="chinese"></a>
+
+## 中文
 
 本项目提供 TFM-ICGN、FFT-ICGN、SIFT-ICGN 和 RG-ICGN 四种二维数字图像相关（Digital Image Correlation，DIC）方法的参考代码，用于估计参考图像与变形图像之间的面内位移。
 
@@ -172,3 +178,186 @@ TFM、FFT、SIFT 入口会更新数据目录中的 `实验指标汇总.csv`。�
 本项目采用分文件许可：默认使用 [Apache-2.0](LICENSE)；七个 IC-GN 核心文件使用 [MPL-2.0](LICENSES/MPL-2.0.txt)，RG 入口使用 [BSD-3-Clause](LICENSES/BSD-3-Clause.txt)。具体文件范围和必须保留的法律声明见 [NOTICE](NOTICE)。随附模型权重、示例图像和项目文档采用 Apache-2.0，既有第三方权利不受影响。
 
 本包包含相应源码。再分发时须保留适用的许可、版权及修改声明；代码头部的法律声明不属于已清除的算法注释。
+
+---
+
+<a id="english"></a>
+
+# English
+
+[中文](#chinese) | **English**
+
+This repository provides reference implementations of four two-dimensional digital image correlation (DIC) methods: **TFM-ICGN, FFT-ICGN, SIFT-ICGN, and RG-ICGN**. They estimate in-plane displacement between a reference image and a deformed image.
+
+TFM-ICGN uses the Transformer-based TFM-DIC network to predict an initial displacement field, followed by second-order inverse-compositional Gauss–Newton (IC-GN) refinement for subpixel estimation. The other three methods use FFT cross-correlation, SIFT feature matching, and reliability-guided propagation for initialization, respectively.
+
+The repository includes method implementations, the final model checkpoint, and the REF/TAR image pair from the `tension009` experiment. Training scripts, the training dataset, and the original experimental result files are not included.
+
+## 1. Methods and entry points
+
+| Method | Initialization | Entry point |
+| --- | --- | --- |
+| TFM-ICGN | TFM-DIC network prediction | `source/run_gmdic_icgn.py` |
+| FFT-ICGN | FFT cross-correlation | `source/run_fftcc_icgn.py` |
+| SIFT-ICGN | SIFT matching and local affine estimation | `source/run_sift_icgn.py` |
+| RG-ICGN | FFT initialization of a central seed, followed by ZNCC-prioritized propagation to four-connected neighbors | `source/run_RG_icgn.py` |
+
+All four entry points use the project's second-order, 12-parameter IC-GN solver. RG-ICGN is this project's reliability-guided implementation and is not equivalent to the complete official Ncorr implementation. Each point is attempted at most once; failed points do not propagate, and additional seeds are not introduced automatically.
+
+The network module and class are both named `tfmdic`. The identifiers `gmdic`, `GM`, and `GMGN` retained in entry points and output filenames are historical names.
+
+## 2. Repository structure
+
+```text
+.
+├── .gitignore
+├── README.md
+├── LICENSE
+├── NOTICE
+├── LICENSES/
+│   ├── MPL-2.0.txt
+│   └── BSD-3-Clause.txt
+├── requirements.txt
+├── model_config.json
+├── data/
+│   └── tension009/
+│       ├── tensionREF.bmp
+│       └── tensionTAR.bmp
+├── checkpoints/
+│   └── step_250000.pth
+└── source/
+    ├── run_gmdic_icgn.py
+    ├── run_fftcc_icgn.py
+    ├── run_sift_icgn.py
+    ├── run_RG_icgn.py
+    ├── networks/
+    │   ├── tfmdic.py
+    │   └── ...
+    ├── icgn/
+    │   └── ...
+    └── utils/
+        └── utils.py
+```
+
+`networks/` contains feature extraction, Transformer, and correlation matching modules. `icgn/` contains initialization, gradient computation, interpolation, IC-GN refinement, and metric reporting.
+
+## 3. Dependencies
+
+The following local environment was used for syntax checks, checkpoint loading, and targeted solver checks. This does not constitute comprehensive compatibility testing across platforms.
+
+| Software | Version |
+| --- | --- |
+| Python | 3.10.16 |
+| PyTorch | 2.5.1 |
+| NumPy | 2.0.1 |
+| SciPy | 1.15.2 |
+| OpenCV | 4.10.0 |
+| Matplotlib | 3.10.0 |
+
+With Python 3.10, install dependencies from the repository root:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+`requirements.txt` includes PyTorch 2.5.1. To select a specific CPU or CUDA build, install the appropriate PyTorch 2.5.1 build first, then install the remaining dependencies. The TFM-ICGN entry point selects its device according to CUDA availability; the complete image-processing pipeline has not yet been validated on both CPU and GPU. The other three methods do not require network weights.
+
+## 4. Prepare input images
+
+The original `tension009` image pair is included as `data/tension009/tensionREF.bmp` and `data/tension009/tensionTAR.bmp`. To use it, run commands from the repository root and set `DATA_DIR` in each entry point you intend to run to `'data/tension009'`. The scripts currently retain their original paths, so this setting must be changed manually. Ground-truth CSV files are not included in this example; the metric module therefore reports the IC-GN correction magnitude rather than ground-truth error.
+
+For another image pair, create a separate directory containing one reference image and one deformed image:
+
+```text
+data/example/
+├── sample_REF.png
+└── sample_TAR.png
+```
+
+Filenames must contain uppercase `REF` and `TAR`, respectively. The scripts search for `*REF*.*` and `*TAR*.*` and use the first match, so each directory should contain only one matching image pair. Both images should have identical dimensions. OpenCV reads them as grayscale images.
+
+Set `DATA_DIR` in the entry point to your image directory, for example:
+
+```python
+DATA_DIR = r"D:\DIC_data\example"
+```
+
+Each entry point has its own `DATA_DIR`; there is currently no shared command-line interface. To compare the same image pair, point all four scripts to the same directory. The default points-of-interest (POI) domain excludes a 12-pixel border, so input images must be large enough to accommodate the subsets and border.
+
+## 5. Run the methods
+
+Open a terminal in the repository root and run the methods you need:
+
+```bash
+python source/run_gmdic_icgn.py
+python source/run_fftcc_icgn.py
+python source/run_sift_icgn.py
+python source/run_RG_icgn.py
+```
+
+TFM-ICGN integrates network inference and IC-GN refinement; no initial-displacement CSV needs to be generated beforehand. The checkpoint is loaded from `checkpoints/step_250000.pth`, with its path resolved relative to the script location.
+
+Outputs are written to `DATA_DIR`. Repeated runs update files with the same names. The FFT, SIFT, and RG entry points execute code at module level and should be run as scripts rather than imported as ordinary library modules.
+
+## 6. Model and solver parameters
+
+### TFM-DIC model
+
+| Parameter | Value used by the entry point |
+| --- | --- |
+| `num_scales` | 1 |
+| `feature_channels` | 128 |
+| `num_transformer_blocks` | 16 |
+| `num_head` | 1 |
+| `attention_type` | `swin` |
+| `ffn_dim_expansion` | 4 |
+| `upsample_factor` | 2 |
+| `attn_splits_list` | `[8]` |
+| `corr_radius_list` | `[5]` |
+| Feature-flow propagation | Disabled |
+
+Features are extracted at half the input resolution. Matching uses local correlation with a radius of 5 on the feature grid, followed by learned 2× upsampling. `attn_splits_list=[8]` specifies the number of window splits, not a fixed 8×8 window for every input size. The current inference configuration does not perform unrestricted all-pairs image matching.
+
+The checkpoint corresponds to 250,000 training steps, a batch size of 2, random seed 326, learning rate 0.0002, weight decay 0.0001, and loss-weighting factor gamma 0.9. These settings are recorded in `model_config.json`.
+
+`model_config.json` documents the configuration; the entry point does not read it automatically. When instantiating `tfmdic` yourself, explicitly provide the model parameters above rather than relying on all of the class defaults to load this checkpoint.
+
+### IC-GN solver
+
+| Parameter | Value used by the entry points |
+| --- | --- |
+| Shape function | Second order, 12 parameters |
+| Subset radius | 10, giving a 21×21-pixel subset |
+| Convergence threshold | 0.0001 |
+| Maximum iterations | 50 |
+| Default POI spacing | 1 pixel |
+| Optimization criterion | ZNSSD |
+| Reference-image gradients | Fourth-order finite differences |
+| Target-image interpolation | B-spline interpolation |
+
+## 7. Outputs and metrics
+
+Displacement is measured in pixels. `U` is displacement along image columns, and `V` is displacement along image rows.
+
+| Method | Main outputs |
+| --- | --- |
+| TFM-ICGN | Initial fields: `GM_U.csv`, `GM_V.csv`; refined fields: `GMGN_U.csv`, `GMGN_V.csv`; corresponding displacement plots |
+| FFT-ICGN | `FFT_ICGN2_U.csv`, `FFT_ICGN2_V.csv`, `FFT_ICGN2_displacement.png` |
+| SIFT-ICGN | `SIFT_ICGN2_U.csv`, `SIFT_ICGN2_V.csv`, `SIFT_ICGN2_displacement.png` |
+| RG-ICGN | `RG_ICGN2_U.csv`, `RG_ICGN2_V.csv`, `RG_ICGN2_displacement.png` |
+
+By default, refined outputs exclude a 12-pixel border on all sides. Account for this offset when mapping output coordinates back to the original image. The TFM initial-displacement files retain the full image dimensions and contain a trailing comma on each CSV row.
+
+Invalid-point conventions differ between entry points. In particular, RG writes unvisited points as zeros in its CSV outputs, and some failed points retain their initial estimates. A zero in the CSV is therefore not sufficient to identify either a true zero displacement or a successful solution.
+
+The TFM, FFT, and SIFT entry points update `实验指标汇总.csv` in the data directory. The current RG entry point uses separate console reporting and does not update this summary. Running all four entry points does not automatically produce a complete, consistently defined four-method results table.
+
+To calculate initial displacement deviation (IDD), provide matching `*_GT_U.csv` and `*_GT_V.csv` ground-truth files with the same prefix in the image directory. Full-size matrices and matrices aligned by symmetric border cropping are supported, provided they cover all selected points. Without ground truth, the relevant entry points report the displacement correction between initialization and IC-GN refinement. This correction is not an error measured against ground truth.
+
+## 8. Licensing
+
+Licensing is specified per file. [Apache-2.0](LICENSE) is the default license; seven IC-GN core files use [MPL-2.0](LICENSES/MPL-2.0.txt), and the RG entry point uses [BSD-3-Clause](LICENSES/BSD-3-Clause.txt). See [NOTICE](NOTICE) for the exact file scope and required legal notices. The included model checkpoint, example images, and project documentation use Apache-2.0; existing third-party rights remain unaffected.
+
+The corresponding source code is included. Redistributions must retain applicable license, copyright, and modification notices. Legal notices in source-file headers are separate from the explanatory algorithm comments that were removed.
+
+[Back to 中文](#chinese)
